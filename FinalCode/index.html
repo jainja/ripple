@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Analyzing Rippled Server Info</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+  <link rel="stylesheet" href="ripple.css" />
+</head>
+
+<body style="background-color:cornflowerblue;">
+  <img src="img/ripple.jpg" style="height: 175px; width: 100%;" />
+  <div class="container">
+    <div class="table-responsive">
+      <h1 align="center">Analyzing Rippled Server Infos</h1>
+      <br />
+      <div align="center">
+        <button type="button" name="load_data" id="load_data" class="btn btn-info">Load Data</button>
+      </div>
+      <div id="Data" style="height: 400px; width: 100%;">
+        <div id="chartContainer" class="leftpane" src="img/ripple.jpg"></div>
+        <div class="rightpane">
+          <h3 align="center" style="color:greenyellow">Rippled Server Info : statistics </h3>
+          <table class="center" style="width:600px">
+            <tr>
+              <td>XRP Ledger performance statistics:</td>
+              <td> Duration in Sec. </td>
+            </tr>
+            <tr>
+              <td>The value for min LedgerTime is (In Seconds):</td>
+              <td> <span id="min"></span></td>
+            </tr>
+            <tr>
+              <td>The value for max LedgerTime is (In Seconds):</td>
+              <td> <span id="max"></span></td>
+            </tr>
+            <tr>
+              <td>The value for avg LedgerTime is (In Seconds):</td>
+              <td> <span id="avg"></span></td>
+            </tr>
+          </table>
+          <br />
+        </div>
+      </div>
+    </div>
+    <br />
+    <h3 align="center"> Rippled Server Info </h3>
+    <div id="employee_table"></div>>
+    <br />
+  </div>
+  </div>
+</body>
+
+</html>
+<script>
+  $(document).ready(function () {
+    $('#load_data').click(function () {
+      $.ajax({
+        url: "ServerInfo.csv",
+        dataType: "text",
+        success: function (res) {
+          var employee_data = res.split(/\r?\n|\r/);
+          var table_data = '<table class="table table-bordered table-striped">';
+          for (var count = 0; count < employee_data.length; count++) {
+            var cell_data = employee_data[count].split(",");
+            table_data += '<tr>';
+            for (var cell_count = 0; cell_count < cell_data.length; cell_count++) {
+              if (count === 0) {
+                table_data += '<th>' + cell_data[cell_count] + '</th>';
+              }
+              else {
+                table_data += '<td>' + cell_data[cell_count] + '</td>';
+              }
+            }
+            table_data += '</tr>';
+          }
+          table_data += '</table>';
+          $('#employee_table').html(table_data);
+
+          var dataSeries = { type: "line" };
+          var dataPoints = [];
+          var minLedgerTime;
+          var maxLedgerTime;
+          var minSeqNum;
+          var maxSeqNum;
+          var avgLedgerTime = 0.0;
+
+          for (var i = 1; i < employee_data.length - 1; i++) {
+            var Ledger_data = employee_data[i].split(",");
+            if (i == 1) {
+              minSeqNum = Ledger_data[1];
+              minLedgerTime = Ledger_data[2];
+              maxLedgerTime = Ledger_data[2];
+              avgLedgerTime = Number(Ledger_data[2]);
+            }
+            if (i >= 2) {
+              if (minLedgerTime > Ledger_data[2]) {
+                minLedgerTime = Ledger_data[2];
+              }
+              if (maxLedgerTime < Ledger_data[2]) {
+                maxLedgerTime = Ledger_data[2];
+              }
+              avgLedgerTime = Number(avgLedgerTime) + Number(Ledger_data[2]);
+            }
+            dataPoints.push({ 'x': avgLedgerTime / 1000, 'y': Number(Ledger_data[1]) });
+            maxSeqNum = Ledger_data[1];
+          }
+          avgLedgerTime = Number(avgLedgerTime / (employee_data.length + 1));
+
+          minLedgerTime = minLedgerTime / 1000;
+          maxLedgerTime = maxLedgerTime / 1000;
+          avgLedgerTime = avgLedgerTime / 1000;
+          console.log(minLedgerTime, maxLedgerTime, avgLedgerTime)
+          document.getElementById("min").innerHTML = minLedgerTime.toFixed(2);
+          document.getElementById("max").innerHTML = maxLedgerTime.toFixed(2);
+          document.getElementById("avg").innerHTML = avgLedgerTime.toFixed(2);
+
+          var data = [{
+            'type': 'line',
+            indexLabelFontColor: "#5A5757",
+            indexLabelFontSize: 16,
+            indexLabelPlacement: "outside",
+            'dataPoints': dataPoints
+          }];
+
+          console.log(data);
+
+          var options = {
+            animationEnabled: true,
+            zoomEnabled: true,
+            theme: "light1",
+            axisX: {
+              title: "Time (in sec)",
+            },
+            axisY: {
+              title: "Sequence Number",
+            },
+            title: {
+              text: "XRP Ledger (Time Vs Sequence Number)"
+            },
+            data: data
+          };
+
+          var chart = new CanvasJS.Chart("chartContainer", options
+          );
+          console.log(data);
+          chart.render();
+        }
+      });
+    });
+  });
+</script>
